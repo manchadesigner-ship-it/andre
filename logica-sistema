@@ -1,0 +1,92 @@
+Funcionalidades Principais
+1. Gestão de Imóveis (CRUD)
+
+Cadastro com campos obrigatórios: tipo, endereço, valor do aluguel, condomínio, IPTU, área, status.
+Campos opcionais: descrição, mobiliado, pets, observações.
+Compartilhamento do imóvel com suas fotos para aluguel
+
+Lista com cards e filtros por status/tipo/valor.
+Busca por endereço ou características.
+Edição com histórico de alterações (versionamento).
+Exclusão lógica (soft delete).
+
+2. Sistema de Imagens e Documentos
+Fotos do imóvel: até 20 imagens para divulgação (JPG, PNG, WEBP).
+Imagens de manutenção: galeria separada para registro de problemas e reparos.
+Planta baixa: upload em PDF ou imagem (JPG/PNG), com visualização em tela cheia.
+Compressão automática, thumbnails e versionamento de arquivos.
+
+3. Despesas por Imóvel
+
+Cadastro de despesas vinculadas a cada imóvel.
+Campos: id, imovelId, tipoDespesa (condomínio, IPTU, manutenção, taxa extra), descricao, valor, data, comprovante (PDF/imagem).
+Lista de despesas com filtros por período e tipo.
+Relatórios de despesas por imóvel em PDF.
+Gráfico de despesas x receitas no dashboard.
+
+4. Gestão de Contratos e Contas
+
+Cadastro de contrato vinculando cliente e imóvel.
+Campos: inquilino, valor, vencimento, datas início/fim, tipo de contrato.
+Configurações de cobrança: multa, juros, desconto, reajuste automático.
+Dashboard financeiro: contas em dia, vencidas, pagas.
+Histórico financeiro completo (extratos, inadimplência, relatórios).
+Recibos de pagamento
+
+5. Pagamentos 
+
+PIX (QR Code)
+Conseguir dar baixa e emitir o recibo para o inquilino.
+
+6. Relatórios e PDFs
+
+Relatórios de imóveis, contratos, despesas, inadimplência e faturamento.
+Exportação para PDF com cabeçalho, rodapé, tabelas e somatórios.
+Relatórios específicos:
+Receitas x Despesas por imóvel.
+Evolução mensal de contratos ativos.
+Histórico de manutenção com fotos anexadas.
+
+7. Clientes
+
+CRUD completo: nome, CPF/CNPJ, telefone, e-mail, endereço, observações.
+Associação a contratos.
+Busca e filtros por nome ou documento.
+
+8. Autenticação e Perfis
+
+Cadastro/login com e-mail e senha.
+Perfis: admin, gestor, atendente.
+Supabase.
+
+Logs de auditoria de alterações.
+
+⚙️ Tecnologias Recomendadas
+
+Frontend: Flutter Web.
+Realtime/Backend: Supabase.
+PDF: pacotes pdf + printing.
+Internacionalização e datas: intl.
+Adicionar Gráfico de pizza
+Tema claro/escuro
+
+Interface
+
+Dashboard:
+
+Cards: imóveis disponíveis, contratos ativos, inadimplência, faturamento.
+Gráfico: Receitas x Despesas por mês.
+Sidebar: navegação para imóveis, clientes, contratos, despesas, relatórios.
+Imóveis: tabs para Fotos de divulgação, Fotos de manutenção, Planta baixa (PDF).
+Relatórios: geração e download em PDF.
+
+Critérios de Aceite
+
+É possível cadastrar imóveis, clientes, contratos e despesas.
+Upload de fotos, plantas baixas em PDF e imagens de manutenção funciona corretamente.
+Relatórios de receitas x despesas podem ser baixados em PDF.
+Status financeiro e de contratos atualizaem tempo real.
+Imprimir o contrato pelo sistema para o cliente assinar
+
+Importante:
+Cria logs de console nas paginas para eu entender o que está acontecendo por trás do sistema.
