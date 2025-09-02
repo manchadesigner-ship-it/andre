@@ -44,6 +44,42 @@ class _ImovelDetalhesPageState extends State<ImovelDetalhesPage> {
     return 'imovel_id';
   }
 
+  /// Retorna a URL base correta dependendo do ambiente
+  String _getBaseUrl() {
+    // Se estiver rodando em localhost, use a URL de produção configurada
+    if (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1') {
+      // URL de produção no Vercel
+      return 'https://andre-ten.vercel.app';
+    }
+    // Caso contrário, use a URL atual
+    return Uri.base.origin;
+  }
+
+  /// Normaliza tipos de imóveis para garantir compatibilidade com o dropdown
+  String _normalizarTipo(String? tipo) {
+    const tiposValidos = [
+      'Apartamento', 'Casa', 'Casa de Condomínio', 'Kitnet', 'Loft', 'Studio', 
+      'Sobrado', 'Cobertura', 'Comercial', 'Sala Comercial', 'Loja', 'Galpão', 'Terreno', 'Outro'
+    ];
+    
+    String tipoAtual = tipo ?? 'Apartamento';
+    
+    // Mapeamento para tipos antigos/diferentes
+    switch (tipoAtual.toLowerCase()) {
+      case 'comercial':
+        tipoAtual = 'Comercial';
+        break;
+      case 'residencial':
+        tipoAtual = 'Apartamento';
+        break;
+      case 'casa':
+        tipoAtual = 'Casa';
+        break;
+    }
+    
+    return tiposValidos.contains(tipoAtual) ? tipoAtual : 'Apartamento';
+  }
+
   Future<void> _reloadFromDb() async {
     final rid = _rowId(_item);
     if (rid == null) return;
@@ -361,7 +397,8 @@ class _ImovelDetalhesPageState extends State<ImovelDetalhesPage> {
             'exp': exp.toString(),
           },
         );
-        final link = '${Uri.base.scheme}://${Uri.base.host}${Uri.base.hasPort ? ':' + Uri.base.port.toString() : ''}/#${uri.fragment}?${uri.query}';
+        final baseUrl = _getBaseUrl();
+        final link = '$baseUrl/#${uri.fragment}?${uri.query}';
         await _svc.addShareLink(imovelId: rid, shareLink: link);
         if (!mounted) return;
         await Clipboard.setData(ClipboardData(text: link));
@@ -370,6 +407,240 @@ class _ImovelDetalhesPageState extends State<ImovelDetalhesPage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Falha ao gerar link: $e')));
       }
+    }
+  }
+
+  Future<void> _openEditForm() async {
+    // Carregar dados atuais do imóvel
+    final item = _item;
+    final nomeCtrl = TextEditingController(text: item['nome']?.toString() ?? '');
+    String tipoSelecionado = _normalizarTipo(item['tipo']?.toString());
+    final endCtrl = TextEditingController(text: item['endereco']?.toString() ?? '');
+    final aluguelCtrl = TextEditingController(text: item['valor_aluguel']?.toString() ?? '');
+    final condCtrl = TextEditingController(text: item['condominio']?.toString() ?? '');
+    final iptuCtrl = TextEditingController(text: item['iptu']?.toString() ?? '');
+    final iptuNumCtrl = TextEditingController(text: item['numero_iptu']?.toString() ?? '');
+    final ucEnergiaCtrl = TextEditingController(text: item['uc_energia']?.toString() ?? '');
+    final ucAguaCtrl = TextEditingController(text: item['uc_agua']?.toString() ?? '');
+    final internetCtrl = TextEditingController(text: item['internet']?.toString() ?? '');
+    final areaCtrl = TextEditingController(text: item['area']?.toString() ?? '');
+    final descCtrl = TextEditingController(text: item['descricao']?.toString() ?? '');
+    final obsCtrl = TextEditingController(text: item['observacoes']?.toString() ?? '');
+    final senhaAlarmeCtrl = TextEditingController(text: item['senha_alarme']?.toString() ?? '');
+    final senhaInternetCtrl = TextEditingController(text: item['senha_internet']?.toString() ?? '');
+    bool mobiliado = item['mobiliado'] == true;
+    bool pets = item['pets'] == true;
+    String status = item['status']?.toString() ?? 'disponivel';
+
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar imóvel'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nomeCtrl,
+                  decoration: const InputDecoration(labelText: 'Nome'),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: tipoSelecionado,
+                  decoration: const InputDecoration(labelText: 'Tipo*'),
+                  items: const [
+                    DropdownMenuItem(value: 'Apartamento', child: Text('Apartamento')),
+                    DropdownMenuItem(value: 'Casa', child: Text('Casa')),
+                    DropdownMenuItem(value: 'Casa de Condomínio', child: Text('Casa de Condomínio')),
+                    DropdownMenuItem(value: 'Kitnet', child: Text('Kitnet')),
+                    DropdownMenuItem(value: 'Loft', child: Text('Loft')),
+                    DropdownMenuItem(value: 'Studio', child: Text('Studio')),
+                    DropdownMenuItem(value: 'Sobrado', child: Text('Sobrado')),
+                    DropdownMenuItem(value: 'Cobertura', child: Text('Cobertura')),
+                    DropdownMenuItem(value: 'Comercial', child: Text('Comercial')),
+                    DropdownMenuItem(value: 'Sala Comercial', child: Text('Sala Comercial')),
+                    DropdownMenuItem(value: 'Loja', child: Text('Loja')),
+                    DropdownMenuItem(value: 'Galpão', child: Text('Galpão')),
+                    DropdownMenuItem(value: 'Terreno', child: Text('Terreno')),
+                    DropdownMenuItem(value: 'Outro', child: Text('Outro')),
+                  ],
+                  onChanged: (v) => tipoSelecionado = v ?? 'Apartamento',
+                  isExpanded: true,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: endCtrl,
+                  decoration: const InputDecoration(labelText: 'Endereço*'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: aluguelCtrl,
+                  decoration: const InputDecoration(labelText: 'Valor aluguel*'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: condCtrl,
+                  decoration: const InputDecoration(labelText: 'Condomínio'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: iptuCtrl,
+                  decoration: const InputDecoration(labelText: 'IPTU'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: iptuNumCtrl,
+                  decoration: const InputDecoration(labelText: 'Número do IPTU'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: ucEnergiaCtrl,
+                  decoration: const InputDecoration(labelText: 'UC Energia'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: ucAguaCtrl,
+                  decoration: const InputDecoration(labelText: 'UC Água'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: internetCtrl,
+                  decoration: const InputDecoration(labelText: 'Internet (mensal)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: areaCtrl,
+                  decoration: const InputDecoration(labelText: 'Área (m²)'),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  decoration: const InputDecoration(labelText: 'Descrição'),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: obsCtrl,
+                  decoration: const InputDecoration(labelText: 'Observações'),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: senhaAlarmeCtrl,
+                  decoration: const InputDecoration(labelText: 'Senha do alarme'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: senhaInternetCtrl,
+                  decoration: const InputDecoration(labelText: 'Senha da internet'),
+                ),
+                const SizedBox(height: 12),
+                StatefulBuilder(
+                  builder: (context, setState) => Column(
+                    children: [
+                      CheckboxListTile(
+                        title: const Text('Mobiliado'),
+                        value: mobiliado,
+                        onChanged: (v) => setState(() => mobiliado = v ?? false),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      CheckboxListTile(
+                        title: const Text('Aceita pets'),
+                        value: pets,
+                        onChanged: (v) => setState(() => pets = v ?? false),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      DropdownButtonFormField<String>(
+                        value: status,
+                        decoration: const InputDecoration(labelText: 'Status'),
+                        items: const [
+                          DropdownMenuItem(value: 'disponivel', child: Text('Disponível')),
+                          DropdownMenuItem(value: 'ocupado', child: Text('Ocupado')),
+                          DropdownMenuItem(value: 'manutencao', child: Text('Manutenção')),
+                          DropdownMenuItem(value: 'inativo', child: Text('Inativo')),
+                        ],
+                        onChanged: (v) => setState(() => status = v ?? 'disponivel'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (tipoSelecionado.trim().isEmpty || endCtrl.text.trim().isEmpty || aluguelCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Preencha os campos obrigatórios')),
+                );
+                return;
+              }
+
+              double? toNum(String s) => s.trim().isEmpty ? null : double.tryParse(s.replaceAll(',', '.'));
+              
+              final payload = {
+                'nome': nomeCtrl.text.trim().isEmpty ? null : nomeCtrl.text.trim(),
+                'tipo': tipoSelecionado.trim(),
+                'endereco': endCtrl.text.trim(),
+                'valor_aluguel': double.tryParse(aluguelCtrl.text.trim()) ?? 0,
+                'condominio': toNum(condCtrl.text),
+                'iptu': toNum(iptuCtrl.text),
+                'numero_iptu': iptuNumCtrl.text.trim().isEmpty ? null : iptuNumCtrl.text.trim(),
+                'uc_energia': ucEnergiaCtrl.text.trim().isEmpty ? null : ucEnergiaCtrl.text.trim(),
+                'uc_agua': ucAguaCtrl.text.trim().isEmpty ? null : ucAguaCtrl.text.trim(),
+                'internet': toNum(internetCtrl.text),
+                'area': toNum(areaCtrl.text),
+                'descricao': descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                'observacoes': obsCtrl.text.trim().isEmpty ? null : obsCtrl.text.trim(),
+                'senha_alarme': senhaAlarmeCtrl.text.trim().isEmpty ? null : senhaAlarmeCtrl.text.trim(),
+                'senha_internet': senhaInternetCtrl.text.trim().isEmpty ? null : senhaInternetCtrl.text.trim(),
+                'mobiliado': mobiliado,
+                'pets': pets,
+                'status': status,
+                'updated_at': DateTime.now().toIso8601String(),
+              };
+
+              try {
+                final rid = _rowId(_item);
+                final idCol = _idColumnFor(_item);
+                await _svc.updateBy(
+                  table: 'imoveis',
+                  id: rid,
+                  values: payload,
+                  idColumn: idCol,
+                );
+                if (!ctx.mounted) return;
+                Navigator.pop(ctx, true);
+              } catch (e) {
+                debugPrint('[ImovelDetalhes][ERROR] save: $e');
+                if (!ctx.mounted) return;
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(content: Text('Falha ao salvar: $e')),
+                );
+              }
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+
+    if (res == true) {
+      // Recarregar dados do banco
+      await _reloadFromDb();
     }
   }
 
@@ -579,10 +850,10 @@ class _ImovelDetalhesPageState extends State<ImovelDetalhesPage> {
                       icon: const Icon(Icons.share_outlined),
                       label: const Text('Compartilhar'),
                     ),
-                    TextButton.icon(
-                      onPressed: rid == null ? null : () => _openDespesaFormForImovel(rid),
-                      icon: const Icon(Icons.payments_outlined),
-                      label: const Text('Adicionar despesa'),
+                    ElevatedButton.icon(
+                      onPressed: () => _openEditForm(),
+                      icon: const Icon(Icons.edit),
+                      label: const Text('Editar imóvel'),
                     ),
                     TextButton.icon(
                       onPressed: () async {

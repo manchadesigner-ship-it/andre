@@ -38,6 +38,42 @@ class _ImoveisPageState extends State<ImoveisPage> {
         .replaceAll("'", '&#39;');
   }
 
+  /// Normaliza tipos de imóveis para garantir compatibilidade com o dropdown
+  String _normalizarTipo(String? tipo) {
+    const tiposValidos = [
+      'Apartamento', 'Casa', 'Casa de Condomínio', 'Kitnet', 'Loft', 'Studio', 
+      'Sobrado', 'Cobertura', 'Comercial', 'Sala Comercial', 'Loja', 'Galpão', 'Terreno', 'Outro'
+    ];
+    
+    String tipoAtual = tipo ?? 'Apartamento';
+    
+    // Mapeamento para tipos antigos/diferentes
+    switch (tipoAtual.toLowerCase()) {
+      case 'comercial':
+        tipoAtual = 'Comercial';
+        break;
+      case 'residencial':
+        tipoAtual = 'Apartamento';
+        break;
+      case 'casa':
+        tipoAtual = 'Casa';
+        break;
+    }
+    
+    return tiposValidos.contains(tipoAtual) ? tipoAtual : 'Apartamento';
+  }
+
+  /// Retorna a URL base correta dependendo do ambiente
+  String _getBaseUrl() {
+    // Se estiver rodando em localhost, use a URL de produção configurada
+    if (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1') {
+      // URL de produção no Vercel
+      return 'https://andre-ten.vercel.app';
+    }
+    // Caso contrário, use a URL atual
+    return Uri.base.origin;
+  }
+
   Future<void> _openShareDialog(Map<String, dynamic> e) async {
     final rid = _rowId(e);
     if (rid == null) return;
@@ -534,7 +570,8 @@ class _ImoveisPageState extends State<ImoveisPage> {
       debugPrint('[Imoveis] Fazendo upload para: $path');
       
       // Jeito correto: gerar link para a rota pública do app com token e expiração
-      final origin = Uri.base.origin;
+      // Use a URL correta baseada no ambiente (produção vs desenvolvimento)
+      final origin = _getBaseUrl();
       // Gera token seguro para Web sem usar shifts (que viram 0 em JS bitwise)
       final token = '${DateTime.now().millisecondsSinceEpoch.toRadixString(36)}${Random().nextInt(0x7fffffff).toRadixString(36)}';
       // exp padrão: 30 dias
@@ -699,7 +736,9 @@ ${img.isNotEmpty ? '<meta property="og:image" content="$img"/>' : ''}
 
   Future<void> _openForm({Map<String, dynamic>? item}) async {
     final nomeCtrl = TextEditingController(text: item?['nome'] ?? '');
-    final tipoCtrl = TextEditingController(text: item?['tipo'] ?? '');
+    
+    String tipoSelecionado = _normalizarTipo(item?['tipo']);
+    
     final endCtrl = TextEditingController(text: item?['endereco'] ?? '');
     final aluguelCtrl = TextEditingController(
       text: item?['valor_aluguel']?.toString() ?? '',
@@ -741,9 +780,27 @@ ${img.isNotEmpty ? '<meta property="og:image" content="$img"/>' : ''}
                     controller: nomeCtrl,
                     decoration: const InputDecoration(labelText: 'Nome'),
                   ),
-                  TextField(
-                    controller: tipoCtrl,
+                  DropdownButtonFormField<String>(
+                    value: tipoSelecionado,
                     decoration: const InputDecoration(labelText: 'Tipo*'),
+                    items: const [
+                      DropdownMenuItem(value: 'Apartamento', child: Text('Apartamento')),
+                      DropdownMenuItem(value: 'Casa', child: Text('Casa')),
+                      DropdownMenuItem(value: 'Casa de Condomínio', child: Text('Casa de Condomínio')),
+                      DropdownMenuItem(value: 'Kitnet', child: Text('Kitnet')),
+                      DropdownMenuItem(value: 'Loft', child: Text('Loft')),
+                      DropdownMenuItem(value: 'Studio', child: Text('Studio')),
+                      DropdownMenuItem(value: 'Sobrado', child: Text('Sobrado')),
+                      DropdownMenuItem(value: 'Cobertura', child: Text('Cobertura')),
+                      DropdownMenuItem(value: 'Comercial', child: Text('Comercial')),
+                      DropdownMenuItem(value: 'Sala Comercial', child: Text('Sala Comercial')),
+                      DropdownMenuItem(value: 'Loja', child: Text('Loja')),
+                      DropdownMenuItem(value: 'Galpão', child: Text('Galpão')),
+                      DropdownMenuItem(value: 'Terreno', child: Text('Terreno')),
+                      DropdownMenuItem(value: 'Outro', child: Text('Outro')),
+                    ],
+                    onChanged: (v) => setSt(() => tipoSelecionado = v ?? 'Apartamento'),
+                    isExpanded: true,
                   ),
                   TextField(
                     controller: endCtrl,
@@ -842,7 +899,7 @@ ${img.isNotEmpty ? '<meta property="og:image" content="$img"/>' : ''}
           ),
           ElevatedButton(
             onPressed: () async {
-              if (tipoCtrl.text.trim().isEmpty ||
+              if (tipoSelecionado.trim().isEmpty ||
                   endCtrl.text.trim().isEmpty ||
                   aluguelCtrl.text.trim().isEmpty)
                 return;
@@ -853,7 +910,7 @@ ${img.isNotEmpty ? '<meta property="og:image" content="$img"/>' : ''}
               final dbStatus = _statusToDb(status);
               final payload = {
                 'nome': nomeCtrl.text.trim().isEmpty ? null : nomeCtrl.text.trim(),
-                'tipo': tipoCtrl.text.trim(),
+                'tipo': tipoSelecionado.trim(),
                 'endereco': endCtrl.text.trim(),
                 'valor_aluguel': toNum(aluguelCtrl.text) ?? 0,
                 'condominio': toNum(condCtrl.text),

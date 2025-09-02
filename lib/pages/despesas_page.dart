@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/supabase_service.dart';
 
 class DespesasPage extends StatefulWidget {
@@ -41,7 +42,7 @@ class _DespesasPageState extends State<DespesasPage> {
     final valorCtrl = TextEditingController(text: item?['valor']?.toString() ?? '');
     final descCtrl = TextEditingController(text: item?['descricao'] ?? '');
     final dataCtrl = TextEditingController(text: _fmtDate(item?['data']));
-    String tipo = item?['tipo_despesa'] ?? 'outros';
+    String tipo = item?['tipo_despesa'] ?? 'outro';
     final isEdit = item != null;
     final res = await showDialog<bool>(
       context: context,
@@ -92,9 +93,9 @@ class _DespesasPageState extends State<DespesasPage> {
                     DropdownMenuItem(value: 'condominio', child: Text('Condomínio')),
                     DropdownMenuItem(value: 'iptu', child: Text('IPTU')),
                     DropdownMenuItem(value: 'manutencao', child: Text('Manutenção')),
-                    DropdownMenuItem(value: 'outros', child: Text('Outros')),
+                    DropdownMenuItem(value: 'outro', child: Text('Outro')),
                   ],
-                  onChanged: (v) => tipo = v ?? 'outros',
+                  onChanged: (v) => tipo = v ?? 'outro',
                 ),
               ],
             ),
@@ -178,8 +179,101 @@ class _DespesasPageState extends State<DespesasPage> {
   }
 
   Future<void> _uploadComprovante(dynamic id) async {
-    // Implementar upload de comprovante
-    debugPrint('[Despesas] Upload comprovante para ID: $id');
+    try {
+      if (id == null) {
+        debugPrint('[Despesas][ERROR] uploadComprovante: id is null');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Erro: ID da despesa não encontrado.'),
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() => _uploading.add(id));
+      
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
+        withData: true,
+      );
+      
+      if (res == null) {
+        debugPrint('[Despesas] Upload cancelado pelo usuário');
+        return;
+      }
+
+      final file = res.files.first;
+      final bytes = file.bytes;
+      
+      if (bytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Erro: Não foi possível ler o arquivo.')),
+          );
+        }
+        return;
+      }
+
+      final rawExt = (file.extension ?? '').toLowerCase();
+      final ext = rawExt.isEmpty ? 'pdf' : rawExt;
+      final contentType = _getContentType(ext);
+      final safeName = file.name.isEmpty ? 'comprovante_$id.$ext' : file.name;
+      final path = 'despesas/$id/comprovantes/${DateTime.now().millisecondsSinceEpoch}_$safeName';
+
+      debugPrint('[Despesas] Enviando comprovante: $safeName');
+
+      final url = await _svc.uploadBytes(
+        bucket: 'galeria',
+        path: path,
+        bytes: bytes,
+        contentType: contentType,
+      );
+
+      // Atualizar despesa com URL do comprovante
+      await _svc.updateById('despesas', id, {
+        'comprovante_url': url,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+
+      _refresh();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Comprovante enviado com sucesso!')),
+        );
+      }
+
+    } catch (e) {
+      debugPrint('[Despesas][ERROR] uploadComprovante: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Falha ao enviar comprovante: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading.remove(id));
+    }
+  }
+
+  String _getContentType(String extension) {
+    switch (extension.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   @override
